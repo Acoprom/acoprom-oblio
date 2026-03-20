@@ -2,14 +2,20 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
 
   try {
+    const credentials = Buffer.from(`${process.env.OBLIO_EMAIL}:${process.env.OBLIO_SECRET}`).toString('base64');
+    
     const response = await fetch('https://www.oblio.eu/api/authorize', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify({
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/json',
+        'Authorization': `Basic ${credentials}`
+      },
+      body: new URLSearchParams({
+        grant_type: 'client_credentials',
         client_id: process.env.OBLIO_EMAIL,
-        client_secret: process.env.OBLIO_SECRET,
-        grant_type: 'client_credentials'
-      })
+        client_secret: process.env.OBLIO_SECRET
+      }).toString()
     });
     const data = await response.json();
     if (!response.ok) {
