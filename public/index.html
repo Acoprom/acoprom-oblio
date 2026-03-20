@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACOPROM — Oblio Manager</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap');
+:root{--bg:#0f0f0f;--bg2:#161616;--bg3:#1e1e1e;--border:#2a2a2a;--border2:#383838;--text:#f0f0f0;--text2:#888;--text3:#555;--green:#00c896;--green-dim:#00c89618;--green-b:#00c89640;--amber:#f59e0b;--amber-dim:#f59e0b18;--red:#ef4444;--red-dim:#ef444418;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;font-size:14px;}
+header{border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;background:var(--bg);z-index:100;}
+.logo{font-size:18px;font-weight:800;letter-spacing:-0.5px;}.logo span{color:var(--green);}
+.hstat{font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);display:flex;align-items:center;gap:8px;}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--text3);transition:all 0.3s;}.dot.on{background:var(--green);box-shadow:0 0 8px var(--green);}
+.app{display:grid;grid-template-columns:280px 1fr;min-height:calc(100vh - 56px);}
+@media(max-width:768px){.app{grid-template-columns:1fr;}.sidebar{border-right:none;border-bottom:1px solid var(--border);}}
+.sidebar{border-right:1px solid var(--border);padding:1.5rem;display:flex;flex-direction:column;gap:1.5rem;overflow-y:auto;}
+.slabel{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;}
+.field{margin-bottom:8px;}.field label{display:block;font-size:11px;color:var(--text2);margin-bottom:3px;font-family:'DM Mono',monospace;}
+.field input,.field select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;transition:border-color 0.2s;}
+.field input:focus,.field select:focus{outline:none;border-color:var(--green);}
+.btn-sm{width:100%;background:transparent;border:1px solid var(--border2);border-radius:6px;padding:8px;color:var(--text2);font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;transition:all 0.2s;}
+.btn-sm:hover{border-color:var(--green);color:var(--green);}
+.upload-zone{border:1px dashed var(--border2);border-radius:8px;padding:1.5rem 1rem;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--green);background:var(--green-dim);}
+.upload-zone.has-file{border-color:var(--green);border-style:solid;background:var(--green-dim);}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.utext{font-size:11px;color:var(--text2);line-height:1.6;}.utext strong{color:var(--text);display:block;font-size:12px;}
+.client-list{display:flex;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto;}
+.ci{padding:8px 10px;border-radius:6px;border:1px solid var(--border);cursor:pointer;transition:all 0.15s;}
+.ci:hover,.ci.sel{border-color:var(--green);background:var(--green-dim);}
+.ci-name{font-size:12px;font-weight:600;}.ci-loc{font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:2px;}
+.btn-add{width:100%;background:transparent;border:1px dashed var(--border);border-radius:6px;padding:7px;color:var(--text3);font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;transition:all 0.2s;margin-top:4px;}
+.btn-add:hover{border-color:var(--green);color:var(--green);}
+.main{padding:2rem;display:flex;flex-direction:column;gap:1.5rem;overflow-y:auto;}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.card-hdr{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;color:var(--text2);letter-spacing:0.08em;text-transform:uppercase;}
+table{width:100%;border-collapse:collapse;font-family:'DM Mono',monospace;font-size:11px;}
+th{padding:6px 6px;text-align:left;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:3px 4px;border-bottom:1px solid var(--border);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+td input{background:var(--bg3);border:1px solid transparent;border-radius:4px;padding:4px 6px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;width:100%;transition:border-color 0.2s;}
+td input:focus{outline:none;border-color:var(--green);}
+td input.warn{border-color:var(--amber)!important;background:var(--amber-dim);color:var(--amber);}
+.totals{display:flex;justify-content:flex-end;gap:2rem;padding:10px 16px;border-top:1px solid var(--border);font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);}
+.totals strong{color:var(--text);}
+.avans-box{background:var(--red-dim);border:1px solid var(--red);border-radius:8px;padding:12px 16px;display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;}
+.avans-lbl{font-family:'DM Mono',monospace;font-size:10px;color:var(--red);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;}
+.avans-inp{background:var(--bg3);border:1px solid var(--red);border-radius:6px;padding:6px 10px;color:var(--red);font-family:'DM Mono',monospace;font-size:13px;font-weight:500;}
+.avans-inp:focus{outline:none;}
+.summary-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;font-family:'DM Mono',monospace;font-size:12px;line-height:2;}
+.sum-row{display:flex;justify-content:space-between;padding:1px 0;}
+.sum-total{display:flex;justify-content:space-between;padding:8px 0 2px;border-top:1px solid var(--border);margin-top:4px;font-size:15px;font-weight:600;}
+.exec-bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+.btn-exec{padding:12px 22px;border-radius:8px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;border:none;}
+.btn-nir{background:var(--bg3);border:1px solid var(--border2);color:var(--text2);}
+.btn-nir:hover{border-color:#3b82f6;color:#3b82f6;}
+.btn-fact{background:var(--green);color:var(--bg);border:1px solid var(--green);}
+.btn-fact:hover{background:#00b085;}
+.btn-both{background:transparent;border:1px solid var(--green-b);color:var(--green);padding:12px 22px;border-radius:8px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;}
+.btn-both:hover{background:var(--green-dim);}
+.status-bar{padding:11px 14px;border-radius:8px;font-family:'DM Mono',monospace;font-size:12px;display:none;margin-top:12px;}
+.status-bar.info{background:var(--green-dim);border:1px solid var(--green-b);color:var(--green);display:block;}
+.status-bar.error{background:var(--red-dim);border:1px solid var(--red);color:var(--red);display:block;}
+.status-bar.loading{background:var(--bg3);border:1px solid var(--border2);color:var(--text2);display:block;}
+.result-link{color:var(--green);font-size:11px;text-decoration:underline;cursor:pointer;margin-left:10px;}
+.spinner{display:inline-block;width:10px;height:10px;border:2px solid rgba(255,255,255,0.15);border-top-color:var(--green);border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:6px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.badge{width:26px;height:26px;border-radius:50%;background:var(--bg3);border:1px solid var(--border2);display:inline-flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);flex-shrink:0;transition:all 0.3s;}
+.badge.done{background:var(--green);border-color:var(--green);color:var(--bg);}
+.sec-title{font-size:16px;font-weight:700;display:flex;align-items:center;gap:10px;margin-bottom:1rem;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.tag-amber{display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-family:'DM Mono',monospace;background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber);}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;display:none;align-items:center;justify-content:center;}
+.modal-bg.open{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:2rem;width:400px;max-width:90vw;}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:1.5rem;}
+.modal-btns{display:flex;gap:10px;margin-top:1.5rem;justify-content:flex-end;}
+.btn-cancel{background:transparent;border:1px solid var(--border2);border-radius:6px;padding:8px 16px;color:var(--text2);font-family:'Syne',sans-serif;font-size:13px;cursor:pointer;}
+.btn-save{background:var(--green);border:none;border-radius:6px;padding:8px 16px;color:var(--bg);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;}
+.xst{padding:8px 12px;border-radius:6px;font-family:'DM Mono',monospace;font-size:11px;margin-top:8px;display:none;border:1px solid var(--border);background:var(--bg3);color:var(--text2);}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">ACOP<span>ROM</span><span style="font-size:11px;font-weight:400;color:var(--text3);margin-left:10px;font-family:'DM Mono',monospace;">oblio manager</span></div>
+  <div class="hstat"><div class="dot" id="connDot"></div><span id="connText">se conectează...</span></div>
+</header>
+<div class="app">
+<div class="sidebar">
+  <div>
+    <div class="slabel">Status</div>
+    <div id="sideStatus" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);line-height:1.8;">
+      Oblio: <span id="oblioStatus">—</span><br>
+      Gestiune: <span style="color:var(--green)">La terti</span>
+    </div>
+  </div>
+  <div>
+    <div class="slabel">Factură furnizor (PDF)</div>
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" accept=".pdf" id="pdfInput" onchange="handlePDF(this)"/>
+      <div style="font-size:24px;margin-bottom:8px;">📄</div>
+      <div class="utext"><strong id="uploadLabel">Încarcă PDF furnizor</strong>trage sau click</div>
+    </div>
+    <div class="xst" id="extractStatus"></div>
+  </div>
+  <div>
+    <div class="slabel">Clienți salvați</div>
+    <div class="client-list" id="clientList"></div>
+    <button class="btn-add" onclick="openModal()">+ client nou</button>
+  </div>
+  <div>
+    <div class="slabel">Setări document</div>
+    <div class="field"><label>Monedă</label><select id="currency"><option value="RON">RON</option><option value="EUR">EUR</option></select></div>
+    <div class="field"><label>Limbă</label><select id="language"><option value="Romana">Română</option><option value="Engleza">Engleză</option></select></div>
+    <div class="field"><label>Scadență (zile)</label><input type="number" id="dueDate" value="0"/></div>
+    <div class="field"><label>Gestiune</label><input type="text" id="gestiune" value="La terti"/></div>
+  </div>
+</div>
+
+<div class="main">
+  <div>
+    <div class="sec-title"><span class="badge" id="b0">1</span> Date client</div>
+    <div class="two-col">
+      <div class="field"><label>Nume client</label><input type="text" id="clientName" placeholder="ex: Grigore Vlad" oninput="updateTotals()"/></div>
+      <div class="field"><label>CIF / CUI</label><input type="text" id="clientCif" placeholder="(opțional - pers. fizică)"/></div>
+    </div>
+    <div class="two-col">
+      <div class="field"><label>Adresă</label><input type="text" id="clientAddress" placeholder="Str. Exemplu nr. 1"/></div>
+      <div class="field"><label>Localitate</label><input type="text" id="clientCity" placeholder="Cluj-Napoca"/></div>
+    </div>
+    <div class="two-col">
+      <div class="field"><label>Județ</label><input type="text" id="clientCounty" placeholder="Cluj"/></div>
+      <div class="field"><label>Țară</label><input type="text" id="clientCountry" value="Romania"/></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="sec-title"><span class="badge" id="b1">2</span> NIR — intrare marfă</div>
+    <div class="card">
+      <div class="card-hdr"><span>Furnizor: <span id="nirSupplier">—</span></span><span id="nirCount">—</span></div>
+      <div style="overflow-x:auto;">
+        <table><thead><tr>
+          <th style="width:42%;padding-left:12px;">Denumire</th><th>U.M.</th><th>Cant.</th><th>Preț fără TVA</th><th>TVA%</th>
+        </tr></thead><tbody id="nirBody"></tbody></table>
+      </div>
+      <div class="totals" id="nirTotals"><span style="color:var(--text3)">— încarcă un PDF —</span></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="sec-title"><span class="badge" id="b2">3</span> Factură ieșire — <span id="factClientTitle" style="color:var(--green);font-weight:400;font-size:14px;">client</span></div>
+    <div class="card">
+      <div class="card-hdr">
+        <span>Completează prețurile de vânzare</span>
+        <span class="tag-amber" id="warnTag" style="display:none;">⚠ completează prețurile portocalii</span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table><thead><tr>
+          <th style="width:42%;padding-left:12px;">Denumire</th><th>U.M.</th><th>Cant.</th><th>Preț vânzare fără TVA</th><th>TVA%</th>
+        </tr></thead><tbody id="iesireBody"></tbody></table>
+      </div>
+      <div class="totals" id="iesireTotals"><span style="color:var(--text3)">— încarcă un PDF —</span></div>
+    </div>
+
+    <div class="avans-box" style="margin-top:12px;">
+      <div>
+        <div class="avans-lbl">Stornare avans (opțional)</div>
+        <div style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:4px;">Nr. factură avans</div>
+        <input class="avans-inp" type="text" id="avansNr" value="" placeholder="ex: ACPF 0420" style="width:150px;" oninput="updateTotals()"/>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:4px;">Valoare cu TVA (RON)</div>
+        <input class="avans-inp" type="number" id="avansVal" value="0" step="0.01" oninput="updateTotals()" style="width:140px;"/>
+      </div>
+      <div id="avansInfo" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);line-height:1.9;align-self:flex-end;"></div>
+    </div>
+
+    <div class="summary-card" style="margin-top:12px;" id="summaryCard"></div>
+  </div>
+
+  <div class="field"><label>Mențiuni factură ieșire</label><input type="text" id="mentions" placeholder="ex: Sistem pluvial BILKA 150mm RAL 8017 MAT"/></div>
+
+  <div>
+    <div class="sec-title"><span class="badge" id="b3">4</span> Execută în Oblio</div>
+    <div class="exec-bar">
+      <button class="btn-exec btn-nir" onclick="createNIR()">1 · Creează NIR</button>
+      <button class="btn-exec btn-fact" onclick="createFactura()">2 · Creează Factură</button>
+      <button class="btn-both" onclick="runBoth()">Execută ambele ↗</button>
+    </div>
+    <div class="status-bar" id="execStatus"></div>
+    <div id="resultNir" style="font-family:'DM Mono',monospace;font-size:11px;margin-top:6px;"></div>
+    <div id="resultFact" style="font-family:'DM Mono',monospace;font-size:11px;margin-top:4px;"></div>
+  </div>
+</div>
+</div>
+
+<div class="modal-bg" id="clientModal">
+  <div class="modal">
+    <h3>Client nou</h3>
+    <div class="field"><label>Nume *</label><input type="text" id="m_name"/></div>
+    <div class="field"><label>CIF</label><input type="text" id="m_cif"/></div>
+    <div class="field"><label>Adresă</label><input type="text" id="m_addr"/></div>
+    <div class="two-col">
+      <div class="field"><label>Localitate</label><input type="text" id="m_city"/></div>
+      <div class="field"><label>Județ</label><input type="text" id="m_county"/></div>
+    </div>
+    <div class="field"><label>Țară</label><input type="text" id="m_country" value="Romania"/></div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Anulează</button>
+      <button class="btn-save" onclick="saveClient()">Salvează</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let cachedToken=null, tokenExpiry=0;
+let nirItems=[], iesireItems=[];
+let clients=JSON.parse(localStorage.getItem('acoprom_clients')||'[]');
+
+async function getToken(){
+  if(cachedToken&&Date.now()<tokenExpiry)return cachedToken;
+  const r=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  const d=await r.json();
+  if(!r.ok)throw new Error(d.error||'Autentificare eșuată');
+  cachedToken=d.access_token;
+  tokenExpiry=Date.now()+((d.expires_in||3600)*1000)-30000;
+  return cachedToken;
+}
+
+async function init(){
+  try{
+    await getToken();
+    document.getElementById('connDot').className='dot on';
+    document.getElementById('connText').textContent='conectat';
+    document.getElementById('oblioStatus').innerHTML='<span style="color:var(--green)">✓ activ</span>';
+  }catch(e){
+    document.getElementById('connDot').className='dot';
+    document.getElementById('connText').textContent='eroare conexiune';
+    document.getElementById('oblioStatus').innerHTML='<span style="color:var(--red)">✗ eroare</span>';
+  }
+}
+
+async function handlePDF(input){
+  const file=input.files[0];if(!file)return;
+  document.getElementById('uploadZone').classList.add('has-file');
+  document.getElementById('uploadLabel').textContent=file.name;
+  const st=document.getElementById('extractStatus');
+  st.style.display='block';st.style.color='var(--text2)';
+  st.innerHTML='<span class="spinner"></span> Se extrag datele din PDF...';
+  const reader=new FileReader();
+  reader.onload=async(e)=>{
+    const base64=e.target.result.split(',')[1];
+    try{
+      const resp=await fetch('/api/extract',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pdfBase64:base64})});
+      const parsed=await resp.json();
+      if(!resp.ok)throw new Error(parsed.error);
+      nirItems=parsed.items.map(it=>({name:it.name,um:it.um||'BUC',qty:parseFloat(it.qty)||0,price:parseFloat(it.price)||0,tva:parseFloat(it.tva)||21}));
+      iesireItems=nirItems.map(it=>({...it,priceOut:0,uncertain:true}));
+      document.getElementById('nirSupplier').textContent=(parsed.supplierName||'')+(parsed.invoiceNumber?' nr.'+parsed.invoiceNumber:'');
+      document.getElementById('nirCount').textContent=nirItems.length+' produse';
+      renderNIR();renderIesire();
+      st.style.color='var(--green)';
+      st.textContent='✓ '+nirItems.length+' produse extrase — completează prețurile de vânzare';
+    }catch(err){st.style.color='var(--red)';st.textContent='✗ '+err.message;}
+  };
+  reader.readAsDataURL(file);
+}
+
+function renderNIR(){
+  const b=document.getElementById('nirBody');b.innerHTML='';
+  nirItems.forEach((it,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td style="padding-left:12px;"><input value="${esc(it.name)}" oninput="nirItems[${i}].name=this.value"/></td><td><input value="${esc(it.um)}" style="width:45px" oninput="nirItems[${i}].um=this.value"/></td><td><input type="number" value="${it.qty}" step="0.001" style="width:58px" oninput="nirItems[${i}].qty=parseFloat(this.value)||0;updateTotals()"/></td><td><input type="number" value="${it.price.toFixed(2)}" step="0.01" oninput="nirItems[${i}].price=parseFloat(this.value)||0;updateTotals()"/></td><td><input type="number" value="${it.tva}" step="1" style="width:45px" oninput="nirItems[${i}].tva=parseFloat(this.value)||0;updateTotals()"/></td>`;
+    b.appendChild(tr);
+  });updateTotals();
+}
+
+function renderIesire(){
+  const b=document.getElementById('iesireBody');b.innerHTML='';
+  let hw=false;
+  iesireItems.forEach((it,i)=>{
+    const w=it.uncertain||it.priceOut===0;if(w)hw=true;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td style="padding-left:12px;"><input value="${esc(it.name)}" oninput="iesireItems[${i}].name=this.value"/></td><td><input value="${esc(it.um)}" style="width:45px" oninput="iesireItems[${i}].um=this.value"/></td><td><input type="number" value="${it.qty}" step="0.001" style="width:58px" oninput="iesireItems[${i}].qty=parseFloat(this.value)||0;updateTotals()"/></td><td><input type="number" value="${(it.priceOut||0).toFixed(2)}" step="0.01" class="${w?'warn':''}" oninput="iesireItems[${i}].priceOut=parseFloat(this.value)||0;iesireItems[${i}].uncertain=false;this.classList.remove('warn');updateTotals()"/></td><td><input type="number" value="${it.tva}" step="1" style="width:45px" oninput="iesireItems[${i}].tva=parseFloat(this.value)||0;updateTotals()"/></td>`;
+    b.appendChild(tr);
+  });
+  document.getElementById('warnTag').style.display=hw?'inline-block':'none';
+  updateTotals();
+}
+
+function updateTotals(){
+  const cur=document.getElementById('currency').value;
+  let ns=0,nt=0;
+  nirItems.forEach(it=>{ns+=it.qty*it.price;nt+=it.qty*it.price*it.tva/100;});
+  document.getElementById('nirTotals').innerHTML=nirItems.length?`<span>Subtotal: <strong>${ns.toFixed(2)} ${cur}</strong></span><span>TVA: <strong>${nt.toFixed(2)} ${cur}</strong></span><span>Total: <strong>${(ns+nt).toFixed(2)} ${cur}</strong></span>`:'<span style="color:var(--text3)">— încarcă un PDF —</span>';
+  let es=0,et=0;
+  iesireItems.forEach(it=>{es+=it.qty*(it.priceOut||0);et+=it.qty*(it.priceOut||0)*it.tva/100;});
+  const eb=es+et;
+  document.getElementById('iesireTotals').innerHTML=iesireItems.length?`<span>Subtotal: <strong>${es.toFixed(2)} ${cur}</strong></span><span>TVA: <strong>${et.toFixed(2)} ${cur}</strong></span><span>Total: <strong>${eb.toFixed(2)} ${cur}</strong></span>`:'<span style="color:var(--text3)">— încarcă un PDF —</span>';
+  const av=parseFloat(document.getElementById('avansVal').value||0);
+  const avNr=document.getElementById('avansNr').value;
+  if(av>0){const avFT=av/1.21;document.getElementById('avansInfo').innerHTML=`Fără TVA: <span style="color:var(--red)">${avFT.toFixed(2)} RON</span><br>TVA: <span style="color:var(--red)">${(av-avFT).toFixed(2)} RON</span>`;}
+  else document.getElementById('avansInfo').innerHTML='';
+  const dp=eb-av;
+  document.getElementById('factClientTitle').textContent=document.getElementById('clientName').value||'client';
+  document.getElementById('summaryCard').innerHTML=`
+    <div class="sum-row"><span style="color:var(--text2)">Total produse fără TVA</span><span>${es.toFixed(2)} ${cur}</span></div>
+    <div class="sum-row"><span style="color:var(--text2)">TVA 21%</span><span>${et.toFixed(2)} ${cur}</span></div>
+    <div class="sum-row" style="border-top:1px solid var(--border);margin-top:4px;padding-top:6px;"><span style="color:var(--text2)">Total brut</span><span>${eb.toFixed(2)} ${cur}</span></div>
+    ${av>0?`<div class="sum-row" style="color:var(--red)"><span>— Stornare avans${avNr?' ('+avNr+')':''}</span><span>-${av.toFixed(2)} ${cur}</span></div>`:''}
+    <div class="sum-total"><span>DE PLATĂ</span><span style="color:var(--green)">${dp.toFixed(2)} ${cur}</span></div>`;
+}
+
+function fmt(d){return d.toISOString().split('T')[0];}
+
+async function createNIR(){
+  const st=document.getElementById('execStatus'),res=document.getElementById('resultNir');
+  st.className='status-bar loading';st.innerHTML='<span class="spinner"></span>Se creează NIR...';res.innerHTML='';
+  try{
+    const token=await getToken();
+    const today=new Date();
+    const gest=document.getElementById('gestiune').value||'La terti';
+    const sn=document.getElementById('nirSupplier').textContent.split(' nr.')[0]||'Furnizor';
+    const body={warehouse:gest,supplier:{name:sn,cif:'',saveToDb:false},issueDate:fmt(today),deliveryDate:fmt(today),currency:document.getElementById('currency').value,language:document.getElementById('language').value,precision:2,mentions:'',products:nirItems.map(it=>({name:it.name,measuringUnit:it.um,quantity:it.qty,price:it.price,vatName:'Normala',vatPercentage:it.tva,isDiscount:false,saveToDb:false,warehouse:gest}))};
+    const r=await fetch('/api/nir',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,body})});
+    const data=await r.json();if(!r.ok)throw new Error(data.error);
+    document.getElementById('b1').className='badge done';document.getElementById('b1').textContent='✓';
+    res.innerHTML=`<span style="color:var(--green)">✓ NIR creat: nr. ${data.number||'—'}</span>${data.link?`<a class="result-link" href="${data.link}" target="_blank">PDF ↗</a>`:''}`;
+    st.className='status-bar info';st.textContent='✓ NIR creat cu succes în gestiunea „'+gest+'"';
+  }catch(e){st.className='status-bar error';st.textContent='✗ NIR: '+e.message;throw e;}
+}
+
+async function createFactura(){
+  const st=document.getElementById('execStatus'),res=document.getElementById('resultFact');
+  st.className='status-bar loading';st.innerHTML='<span class="spinner"></span>Se creează factura de ieșire...';res.innerHTML='';
+  try{
+    const token=await getToken();
+    const today=new Date();const due=new Date(today);due.setDate(due.getDate()+parseInt(document.getElementById('dueDate').value||0));
+    const gest=document.getElementById('gestiune').value||'La terti';
+    const av=parseFloat(document.getElementById('avansVal').value||0);
+    const avNr=document.getElementById('avansNr').value;
+    const products=[...iesireItems.map(it=>({name:it.name,measuringUnit:it.um,quantity:it.qty,price:it.priceOut||0,vatName:'Normala',vatPercentage:it.tva,isDiscount:false,saveToDb:false,warehouse:gest})),...(av>0?[{name:'Stornare avans factura '+(avNr||'—'),measuringUnit:'buc',quantity:1,price:-parseFloat((av/1.21).toFixed(4)),vatName:'Normala',vatPercentage:21,isDiscount:false,saveToDb:false}]:[])];
+    const body={client:{name:document.getElementById('clientName').value,cif:document.getElementById('clientCif').value||'',address:document.getElementById('clientAddress').value,city:document.getElementById('clientCity').value,county:document.getElementById('clientCounty').value,country:document.getElementById('clientCountry').value,saveToDb:false},issueDate:fmt(today),dueDate:fmt(due),deliveryDate:fmt(today),currency:document.getElementById('currency').value,language:document.getElementById('language').value,precision:2,warehouse:gest,useStock:true,mentions:document.getElementById('mentions').value,products};
+    const r=await fetch('/api/invoice',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,body})});
+    const data=await r.json();if(!r.ok)throw new Error(data.error);
+    document.getElementById('b2').className='badge done';document.getElementById('b2').textContent='✓';
+    document.getElementById('b3').className='badge done';document.getElementById('b3').textContent='✓';
+    res.innerHTML=`<span style="color:var(--green)">✓ Factură creată: nr. ${data.number||'—'}</span>${data.link?`<a class="result-link" href="${data.link}" target="_blank">PDF ↗</a>`:''}`;
+    st.className='status-bar info';st.textContent='✓ Factură creată pentru '+document.getElementById('clientName').value+'!';
+  }catch(e){st.className='status-bar error';st.textContent='✗ Factură: '+e.message;throw e;}
+}
+
+async function runBoth(){try{await createNIR();await createFactura();}catch(e){}}
+
+function renderClients(){
+  const list=document.getElementById('clientList');list.innerHTML='';
+  clients.forEach((c,i)=>{
+    const div=document.createElement('div');div.className='ci';
+    div.innerHTML=`<div class="ci-name">${esc(c.name)}</div><div class="ci-loc">${esc(c.city)}, ${esc(c.county)}</div>`;
+    div.onclick=()=>{document.querySelectorAll('.ci').forEach(x=>x.classList.remove('sel'));div.classList.add('sel');document.getElementById('clientName').value=c.name||'';document.getElementById('clientCif').value=c.cif||'';document.getElementById('clientAddress').value=c.address||'';document.getElementById('clientCity').value=c.city||'';document.getElementById('clientCounty').value=c.county||'';document.getElementById('clientCountry').value=c.country||'Romania';updateTotals();};
+    list.appendChild(div);
+  });
+}
+
+function openModal(){document.getElementById('clientModal').classList.add('open');}
+function closeModal(){document.getElementById('clientModal').classList.remove('open');}
+function saveClient(){
+  const name=document.getElementById('m_name').value;if(!name)return alert('Introduceți un nume.');
+  clients.push({name,cif:document.getElementById('m_cif').value,address:document.getElementById('m_addr').value,city:document.getElementById('m_city').value,county:document.getElementById('m_county').value,country:document.getElementById('m_country').value||'Romania'});
+  localStorage.setItem('acoprom_clients',JSON.stringify(clients));renderClients();closeModal();
+  ['m_name','m_cif','m_addr','m_city','m_county'].forEach(id=>document.getElementById(id).value='');
+}
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+const zone=document.getElementById('uploadZone');
+zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag');});
+zone.addEventListener('dragleave',()=>zone.classList.remove('drag'));
+zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('drag');const f=e.dataTransfer.files[0];if(f&&f.type==='application/pdf'){handlePDF({files:[f]});}});
+
+renderClients();
+updateTotals();
+init();
+</script>
+</body>
+</html>
