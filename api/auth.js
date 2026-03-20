@@ -6,20 +6,17 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const credentials = Buffer.from(`${process.env.OBLIO_EMAIL}:${process.env.OBLIO_SECRET}`).toString('base64');
-    
     const response = await fetch('https://www.oblio.eu/api/authorize', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Accept': 'application/json',
-        'Authorization': `Basic ${credentials}`
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
       },
-      body: new URLSearchParams({
-        grant_type: 'client_credentials',
+      body: JSON.stringify({
         client_id: process.env.OBLIO_EMAIL,
-        client_secret: process.env.OBLIO_SECRET
-      }).toString()
+        client_secret: process.env.OBLIO_SECRET,
+        grant_type: 'client_credentials'
+      })
     });
     const data = await response.json();
     if (!response.ok) return res.status(401).json({ error: 'Autentificare eșuată', details: data });
