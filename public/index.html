@@ -116,6 +116,17 @@ td input.warn{border-color:var(--amber)!important;background:var(--amber-dim);co
     <div class="field"><label>Limbă</label><select id="language"><option value="Romana">Română</option><option value="Engleza">Engleză</option></select></div>
     <div class="field"><label>Scadență (zile)</label><input type="number" id="dueDate" value="0"/></div>
     <div class="field"><label>Gestiune</label><input type="text" id="gestiune" value="La terti"/></div>
+    <div style="background:var(--green-dim);border:1px solid var(--green-b);border-radius:8px;padding:12px;">
+      <div class="slabel" style="margin-bottom:8px;color:var(--green);">Prețuri ieșire</div>
+      <div class="field" style="margin-bottom:6px;"><label>Adaos (%)</label>
+        <input type="number" id="adaos" value="0" min="0" step="0.5" oninput="applyAdaos()" style="border-color:var(--green-b);font-size:14px;font-weight:500;color:var(--green);"/>
+      </div>
+      <div class="field" style="margin-bottom:8px;"><label>Reducere (%)</label>
+        <input type="number" id="reducere" value="0" min="0" max="100" step="0.5" oninput="applyAdaos()" style="border-color:#f59e0b;font-size:14px;font-weight:500;color:var(--amber);background:var(--bg3);border:1px solid var(--amber);border-radius:6px;padding:7px 10px;width:100%;font-family:'DM Mono',monospace;"/>
+      </div>
+      <button class="btn-sm" onclick="applyAdaos()" style="border-color:var(--green-b);color:var(--green);font-size:11px;">↻ Recalculează prețuri</button>
+      <div id="adaosInfo" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);margin-top:6px;line-height:1.6;"></div>
+    </div>
   </div>
 </div>
 
@@ -353,6 +364,33 @@ async function createFactura(){
 }
 
 async function runBoth(){try{await createNIR();await createFactura();}catch(e){}}
+
+function applyAdaos(){
+  const adaos = parseFloat(document.getElementById('adaos').value||0);
+  const reducere = parseFloat(document.getElementById('reducere').value||0);
+  if(iesireItems.length===0) return;
+  iesireItems.forEach((it,i)=>{
+    let pret = nirItems[i].price;
+    if(adaos>0) pret = pret*(1+adaos/100);
+    if(reducere>0) pret = pret*(1-reducere/100);
+    iesireItems[i].priceOut = parseFloat(pret.toFixed(2));
+    iesireItems[i].uncertain = false;
+  });
+  renderIesire();
+  const info = document.getElementById('adaosInfo');
+  let msg = [];
+  if(adaos>0) msg.push(`<span style="color:var(--green)">+${adaos}% adaos</span>`);
+  if(reducere>0) msg.push(`<span style="color:var(--amber)">-${reducere}% reducere</span>`);
+  if(adaos>0||reducere>0){
+    const multiplicator = (1+adaos/100)*(1-reducere/100);
+    const net = ((multiplicator-1)*100).toFixed(2);
+    msg.push(`<span style="color:var(--text2)">= ${net>0?'+':''}${net}% net</span>`);
+    info.innerHTML = msg.join(' &nbsp;|&nbsp; ')+`<br><span style="color:var(--text3)">${iesireItems.length} produse recalculate</span>`;
+  } else {
+    info.innerHTML='Introdu adaos și/sau reducere';
+    info.style.color='var(--text3)';
+  }
+}
 
 function renderClients(){
   const list=document.getElementById('clientList');list.innerHTML='';
