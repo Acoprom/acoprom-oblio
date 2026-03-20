@@ -121,8 +121,16 @@ td input.warn{border-color:var(--amber)!important;background:var(--amber-dim);co
       <div class="field" style="margin-bottom:6px;"><label>Adaos (%)</label>
         <input type="number" id="adaos" value="0" min="0" step="0.5" oninput="applyAdaos()" style="border-color:var(--green-b);font-size:14px;font-weight:500;color:var(--green);"/>
       </div>
-      <div class="field" style="margin-bottom:8px;"><label>Reducere (%)</label>
-        <input type="number" id="reducere" value="0" min="0" max="100" step="0.5" oninput="applyAdaos()" style="border-color:#f59e0b;font-size:14px;font-weight:500;color:var(--amber);background:var(--bg3);border:1px solid var(--amber);border-radius:6px;padding:7px 10px;width:100%;font-family:'DM Mono',monospace;"/>
+      <div class="field" style="margin-bottom:4px;">
+        <label>Tip reducere</label>
+        <select id="reducereTip" onchange="applyAdaos()" style="border-color:var(--amber);color:var(--amber);background:var(--bg3);border:1px solid var(--amber);border-radius:6px;padding:7px 10px;width:100%;font-family:'DM Mono',monospace;font-size:12px;">
+          <option value="pct">Procent (%)</option>
+          <option value="suma">Sumă fixă (RON)</option>
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:8px;">
+        <label id="reducereLabel">Reducere (%)</label>
+        <input type="number" id="reducere" value="0" min="0" step="0.5" oninput="applyAdaos()" style="border-color:#f59e0b;font-size:14px;font-weight:500;color:var(--amber);background:var(--bg3);border:1px solid var(--amber);border-radius:6px;padding:7px 10px;width:100%;font-family:'DM Mono',monospace;"/>
       </div>
       <button class="btn-sm" onclick="applyAdaos()" style="border-color:var(--green-b);color:var(--green);font-size:11px;">↻ Recalculează prețuri</button>
       <div id="adaosInfo" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);margin-top:6px;line-height:1.6;"></div>
@@ -367,28 +375,47 @@ async function runBoth(){try{await createNIR();await createFactura();}catch(e){}
 
 function applyAdaos(){
   const adaos = parseFloat(document.getElementById('adaos').value||0);
-  const reducere = parseFloat(document.getElementById('reducere').value||0);
+  const reducereVal = parseFloat(document.getElementById('reducere').value||0);
+  const reducereTip = document.getElementById('reducereTip').value;
+
+  // Actualizeaza label
+  document.getElementById('reducereLabel').textContent = reducereTip==='suma' ? 'Reducere sumă totală (RON)' : 'Reducere (%)';
+
   if(iesireItems.length===0) return;
+
+  // Calculam totalul brut dupa adaos (fara TVA) pentru a distribui reducerea suma
+  let totalFaraTva = nirItems.reduce((s,it)=>s+it.qty*it.price*(1+adaos/100),0);
+
   iesireItems.forEach((it,i)=>{
     let pret = nirItems[i].price;
     if(adaos>0) pret = pret*(1+adaos/100);
-    if(reducere>0) pret = pret*(1-reducere/100);
-    iesireItems[i].priceOut = parseFloat(pret.toFixed(2));
+    if(reducereVal>0){
+      if(reducereTip==='pct'){
+        pret = pret*(1-reducereVal/100);
+      } else {
+        // Distribuim reducerea proportional pe fiecare produs
+        const pondereProdu = (nirItems[i].price*(1+adaos/100)) / (totalFaraTva||1);
+        const reducereProdus = (reducereVal * pondereProdu) / nirItems[i].qty;
+        pret = pret - reducereProdus;
+      }
+    }
+    iesireItems[i].priceOut = parseFloat(Math.max(0,pret).toFixed(2));
     iesireItems[i].uncertain = false;
   });
+
   renderIesire();
+
   const info = document.getElementById('adaosInfo');
   let msg = [];
   if(adaos>0) msg.push(`<span style="color:var(--green)">+${adaos}% adaos</span>`);
-  if(reducere>0) msg.push(`<span style="color:var(--amber)">-${reducere}% reducere</span>`);
-  if(adaos>0||reducere>0){
-    const multiplicator = (1+adaos/100)*(1-reducere/100);
-    const net = ((multiplicator-1)*100).toFixed(2);
-    msg.push(`<span style="color:var(--text2)">= ${net>0?'+':''}${net}% net</span>`);
+  if(reducereVal>0){
+    if(reducereTip==='pct') msg.push(`<span style="color:var(--amber)">-${reducereVal}% reducere</span>`);
+    else msg.push(`<span style="color:var(--amber)">-${reducereVal} RON reducere</span>`);
+  }
+  if(msg.length>0){
     info.innerHTML = msg.join(' &nbsp;|&nbsp; ')+`<br><span style="color:var(--text3)">${iesireItems.length} produse recalculate</span>`;
   } else {
     info.innerHTML='Introdu adaos și/sau reducere';
-    info.style.color='var(--text3)';
   }
 }
 
